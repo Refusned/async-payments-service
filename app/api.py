@@ -1,4 +1,5 @@
 import hashlib
+import json
 import uuid
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
@@ -24,7 +25,10 @@ router = APIRouter(prefix="/api/v1", dependencies=[Depends(require_api_key)])
 
 
 def _request_hash(body: PaymentCreate) -> str:
-    return hashlib.sha256(body.model_dump_json().encode()).hexdigest()
+    # sort_keys: повтор запроса с переставленными ключами в metadata - тот же
+    # запрос, а не ложный 409.
+    canonical = json.dumps(body.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()
 
 
 async def _by_idempotency_key(session: AsyncSession, key: str) -> Payment | None:
